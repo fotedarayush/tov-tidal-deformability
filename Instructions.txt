@@ -1,0 +1,69 @@
+The program can create a sequence of solutions with different central densities (i.e. different masses).
+
+All that you have to do is the following:
+
+* Create a file "infile" as the one attached. 
+
+#ϵ[MeV*fm^-3]	p[MeV*fm^-3]	nB[fm^-3]	μB[MeV]
+
+The first number gives in cgs the central total energy density of the first model. 
+Subsequent models are computed for central densities where we increase the central density in density steps that are given by the second number.
+The last integer number should provide the number of models / central densities to be computed. The next line should give the EoS file in your format.
+
+* Compile the source file with gfortran -o logtov_seq_geom_tidal.out logtov_seq_geom_tidal.f90 (or any other Fortran compiler)
+
+if needed:
+
+gfortran -o logtov_seq_geom_tidal.out logtov_seq_geom_tidal.f90 -fno-automatic
+
+* run ./logtov_seq_geom_tidal.out, which will create a file logtov_seq_geom_tidal.dat
+
+The file logtov_seq_geom_tidal.dat contains a number of columns with the following meaning:
+
+1   central total energy density (multiply by 6.176e17 to get it in g/cm^3)
+2   radius (multiply by 1.476 to get it in km)
+3   gravitational mass in Solar mass
+4   rest mass (assuming a baryon mass of 933 MeV) in solar mass
+5   dummy
+6   dummy
+7   compactness
+8   central rest mass density  (multiply by 6.176e17 to get it in g/cm^3)
+9   central pressure  (multiply by 6.176e17 to get it in g/cm^3 and then with c^2 to get it in Dyne/cm^2)
+10  tidal Love number - tidalk2
+11  tidal coupling constant - kappa2
+12  dimensionless tidal deformability
+13  dummy (y)
+14  dummy (new entry eps(p)*6.176e17)
+15. H
+16. beta
+
+(Note that the tidal parameters can look a bit strange at low masses)
+
+If the program is too slow, one can increase a bit the integration step size - just change the variable h.
+
+If something doesn't work, one may need to adapt some numerical parameters. Inform me in that case and I can have a look.
+
+
+============ New Output ==============
+
+
+rho0,r,m,mrest,exp(nue),nue0,(m/r),restini,pini,tidalk2,kappa2,Lambda,y,eps(p)*6.176e17,H,beta,ef,nf
+
+======================================
+
+
+1.0e14 0.3e14 100
+
+=============
+Original: h=10.*1e-5/1.746
+
+(* parameters for the DD2MEV-CSS files: 1.e14 0.05e14 350)
+
+
+
+
+===================================================
+
+
+chmod +x Tidal_control.sh
+

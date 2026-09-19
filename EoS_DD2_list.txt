@@ -1,0 +1,10 @@
+DD2-EoS-dd2-nlNJL_set244_HG075_eta016_SLy4Crust.dat
+DD2-EoS-ddp-nlNJL_set244_HG075_eta016_SLy4Crust.dat
+DD2-EoS-dpp-nlNJL_set244_HG075_eta016_SLy4Crust.dat
+DD2-EoS-ppp-nlNJL_set244_HG075_eta016_SLy4Crust.dat
+DD2-EoS-dmm-SLy4Crust.dat
+DD2-EoS-ddm-SLy4Crust.dat
+DD2-EoS-dd2-SLy4Crust.dat
+DD2-EoS-ddp-SLy4Crust.dat
+DD2-EoS-dpp-SLy4Crust.dat
+DD2-EoS-ppp-SLy4Crust.dat

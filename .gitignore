@@ -1,0 +1,26 @@
+# Compiled Fortran binaries
+*.out
+*.o
+*.mod
+
+# Generated TOV output
+logtov_seq_geom_tidal.dat
+
+# Generated plots
+*.png
+*.pdf
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Temporary/editor files
+*~
+*.swp
+
+# Result directory
+results/*
+!results/.gitkeep
