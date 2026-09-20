@@ -1,26 +1,35 @@
-# Compiled Fortran binaries
+# ==============================
+# Fortran build files
+# ==============================
 *.out
 *.o
 *.mod
 
-# Generated TOV output
+# ==============================
+# Generated TOV files
+# ==============================
 logtov_seq_geom_tidal.dat
+profile.dat
+asshisto_tov.dat
 
-# Generated plots
-*.png
-*.pdf
+# ==============================
+# Generated analysis plots
+# ==============================
+mass_radius.png
+tidal_deformability.png
+results/*
 
-# macOS
-.DS_Store
+# Keep results directory in Git
+!results/.gitkeep
 
+# ==============================
 # Python
+# ==============================
 __pycache__/
 *.pyc
 
-# Temporary/editor files
-*~
-*.swp
-
-# Result directory
-results/*
-!results/.gitkeep
+# ==============================
+# macOS
+# ==============================
+.DS_Store
+._*
