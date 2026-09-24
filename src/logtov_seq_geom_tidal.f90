@@ -395,12 +395,21 @@ end function find_upper_index
 real function rhsp(rr,pp,mm)
 real,intent(in)::rr,pp,mm
 real::pi
+real::ee
+
 pi=3.1415927654
 
 if (m==0) then
    rhsp=0.
 else
-   rhsp=-(G*eps(pp)*mm/rr**2)*(1.+pp/(eps(pp)*c**2))*(1.+4.*pi*rr**3*pp/(mm*c**2))/(1-2.*G*mm/(rr*c**2))
+
+   ee = eps(pp)
+
+   rhsp=-(G*ee*mm/rr**2) &
+        *(1.+pp/(ee*c**2)) &
+        *(1.+4.*pi*rr**3*pp/(mm*c**2)) &
+        /(1.-2.*G*mm/(rr*c**2))
+
 endif
 return
 
@@ -460,22 +469,23 @@ end function rhsh
 real function rhsb(rr,pp,mm,bb,hh)
 real,intent(in)::rr,pp,mm,bb,hh
 real::pi
+real :: ee
 real::dum !dummy
 real::f
 real::erg1,erg2
 pi=3.1415927654
 
   dum = 1./(1.-2.*mm/rr)
-
+  ee = eps(pp)
   f = (eps(pp+0.01*pp)-eps(pp-0.01*pp))/(0.02*pp)
   
   !f = (eps(pp+0.1*pp)-eps(pp-0.1*pp))/(0.2*pp)
     
   erg1 = 2.*dum*hh* &
-         (-2.*pi*(5*eps(pp)+9.*pp+f*(eps(pp)+pp))+3./rr/rr+2.*dum &
+         (-2.*pi*(5*ee+9.*pp+f*(ee+pp))+3./rr/rr+2.*dum &
            *(mm/rr/rr+4.*pi*rr*pp)*(mm/rr/rr+4.*pi*rr*pp))
          
-  erg2 = 2.*bb/rr*dum*(-1.+mm/rr+2.*pi*rr*rr*(eps(pp)-pp))
+  erg2 = 2.*bb/rr*dum*(-1.+mm/rr+2.*pi*rr*rr*(ee-pp))
 
   rhsb = erg1 + erg2
 
