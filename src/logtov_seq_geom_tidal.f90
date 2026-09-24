@@ -632,15 +632,22 @@ end subroutine eosinit2
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine EosShen2D(rrho,pp,e,rhoarray,parray,harray,earray,yparray)
-
+   
    real, intent(in):: pp
    real, dimension(:), intent(in):: rhoarray,parray,harray,earray,yparray
     real, intent(out):: rrho,e
 real::dump,u  !dummy druck
     integer:: i,it,nn
-
+    real, save :: last_pp = 0.0
+    real, save :: last_rrho = 0.0, last_e = 0.0
+    logical, save :: cache_valid = .false.
 !p von cgs auf geom transformieren:
 dump=log10(pp)  !/(6.676e17*2.9979e10)
+if (cache_valid .and. pp == last_pp) then
+    rrho = last_rrho
+    e = last_e
+    return
+endif
 !dump=dump/(2.9979e10)  !irgendwiw kann ersdas nicht auf einmla rechnen
 !write(*,*)"dump",pp,dump
 !alles nachfolgende in geom einheiten
@@ -666,7 +673,10 @@ dump=log10(pp)  !/(6.676e17*2.9979e10)
 
   rrho = 10.d0**rrho
   e    = 10.d0**e
-  
+  last_pp = pp
+  last_rrho = rrho
+  last_e = e
+  cache_valid = .true.
 !noch auf cgs transformieren:
 !rrho=rrho*6.176e17  !von geom auf g/cm^3
 !e=e*6.176e17  !von geom auf g/cm^3
