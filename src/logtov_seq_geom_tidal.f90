@@ -349,6 +349,49 @@ close(1745)
 
 contains
 
+integer function find_upper_index(array, x, nused)
+
+    implicit none
+
+    integer, intent(in) :: nused
+    real, dimension(:), intent(in) :: array
+    real, intent(in) :: x
+
+    integer :: lo, hi, mid
+
+    ! Same behaviour as the old search for values
+    ! below the first table entry.
+    if (x < array(1)) then
+        find_upper_index = 1
+        return
+    endif
+
+    ! Signal that x lies outside the upper table boundary.
+    if (x >= array(nused)) then
+        find_upper_index = nused + 1
+        return
+    endif
+
+    lo = 1
+    hi = nused
+
+    ! Find the first index satisfying array(index) > x.
+    do while (hi - lo > 1)
+
+        mid = (lo + hi) / 2
+
+        if (array(mid) > x) then
+            hi = mid
+        else
+            lo = mid
+        endif
+
+    enddo
+
+    find_upper_index = hi
+
+end function find_upper_index
+
 real function rhsp(rr,pp,mm)
 real,intent(in)::rr,pp,mm
 real::pi
@@ -592,14 +635,9 @@ dump=log10(pp)  !/(6.676e17*2.9979e10)
 !write(*,*)"dump",pp,dump
 !alles nachfolgende in geom einheiten
 
-  nn=size(harray)
+  nn=length
 ! Find the position in the table
-  do i=1,nn
-     if (parray(i)>dump) then
-        it=i
-        exit
-     endif
-  enddo
+  it = find_upper_index(parray, dump, nn)
   if (it>nn) then
      write(*,*)'In EOS-lookup: Bounds exceeded!!!',rho,rhoarray(1),rhoarray(n)
 ! Do the interpolation
@@ -640,14 +678,9 @@ dump=log10(e)  !/(6.676e17)
 
 !alles nachfolgende in geom einheiten
 
-  nn=size(harray)
+  nn=length
 ! Find the position in the table
-  do i=1,nn
-     if (earray(i)>dump) then
-        it=i
-        exit
-     endif
-  enddo
+  it = find_upper_index(earray, dump, nn)
   write(*,*)i,nn,it
   if (it>=nn) then
      write(*,*)'In EOS-lookup: Bounds exceeded!!!',rho,dump!rhoarray(1),rhoarray(n),dump
