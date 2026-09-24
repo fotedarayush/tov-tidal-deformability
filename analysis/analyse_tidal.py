@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-data = np.loadtxt('/Volumes/AYUSH DRIVE/NS Hyperon project/Tidal_deformability_code_2026/logtov_seq_geom_tidal.dat')
+data = np.loadtxt('/Volumes/AYUSH DRIVE/NS Hyperon project/tov-tidal-deformability/results/EoS_01_06_Mg800.dat')
 
 rho_geom = data[:, 0]
 rho_c = rho_geom * 6.176e17
