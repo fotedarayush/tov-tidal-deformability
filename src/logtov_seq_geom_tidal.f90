@@ -176,7 +176,7 @@ write(*,*)"Start",rho0,p
 !p=p/6.167e17
 
 !#->
-open(unit=1744,file='profile.dat',status='replace',form='formatted',recl=1024)
+!open(unit=1744,file='profile.dat',status='replace',form='formatted',recl=1024)
 
 write(*,*)"drin",n
 do i=1,n
@@ -236,21 +236,21 @@ do i=1,n
        !fill histgram
        !drho=0.005 oben gesetzt
     !ll=floor(ye(i)/dye)
-    ll=floor((log10(rest(p)*6.176e17)-13.)/drho)+1
+    !ll=floor((log10(rest(p)*6.176e17)-13.)/drho)+1
 !!    ll=nint(((rest(p)*6.176e17)-1.e13)/1.e13)
 
-    if (ll>0.and.ll<=nhist) pmhist(ll)=pmhist(ll)+(h/6.)*(n1+2.*n2+2.*n3+n4)
+    !if (ll>0.and.ll<=nhist) pmhist(ll)=pmhist(ll)+(h/6.)*(n1+2.*n2+2.*n3+n4)
 !endif
 
 !write(*,*)i,r,p
 !read(*,*)dum
 !#->
-if (mod(i,100)==1) write(1744,*)r,p,eps(p),m,mrest,rest(p),(h/6.)*(n1+2.*n2+2.*n3+n4)
+!if (mod(i,100)==1) write(1744,*)r,p,eps(p),m,mrest,rest(p),(h/6.)*(n1+2.*n2+2.*n3+n4)
 
 enddo
 
 !#->
-close(1744)
+!close(1744)
 !#->    to search a configuration with a certain mass but then !!! comment stop at mmax
 ! if (m>=1.35) then
 !   write(*,*)"last mass close to requested (->stop)",m,1.5
@@ -259,11 +259,11 @@ close(1744)
 !   rhostep=rhostep*0.5
 ! endif
 
-  open(unit=1111,file='asshisto_tov.dat',status='replace',form='formatted')
-  do ll=1,nhist
-    write(1111,*)yehist(ll),mhist(ll),pmhist(ll),rhohist(ll),sum(pmhist(1:ll))
-  enddo
-  close(unit=1111)
+  !open(unit=1111,file='asshisto_tov.dat',status='replace',form='formatted')
+  !do ll=1,nhist
+    !write(1111,*)yehist(ll),mhist(ll),pmhist(ll),rhohist(ll),sum(pmhist(1:ll))
+  !enddo
+  !close(unit=1111)
   
   
   !note that there are small discontinuities in the histogram. These are a consequce of the EoS table and its interpolation. The jump occur at the points of the eos. Maybe it would be better to interpolate in logspace!!!
