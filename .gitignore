@@ -33,3 +33,12 @@ __pycache__/
 # ==============================
 .DS_Store
 ._*
+
+# External hyperonic EoS source datasets
+eos/hyperonic_dataset/*.csv.gz
+
+# Generated archives
+eos/hyperonic_dataset/*.zip
+
+# Native subset generated from source dataset
+eos/hyperonic_dataset/hyperonic_100/selected_100_native.csv.gz
