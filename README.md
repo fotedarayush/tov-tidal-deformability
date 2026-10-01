@@ -1,639 +1,630 @@
-# TOV and Tidal Deformability Analysis for Hyperonic Neutron-Star Equations of State
+# TOV and Tidal-Deformability Solver
 
-This repository contains a Fortran implementation of the Tolman-Oppenheimer-Volkoff (TOV) equations together with tidal-deformability calculations for cold, beta-equilibrated neutron-star equations of state.
+A Fortran/Python workflow for computing neutron-star structure and tidal properties from tabulated equations of state (EoSs), with a current focus on cold hyperonic matter and the stellar diagnostics discussed by Bauswein et al. (2026).
 
-The current project focuses on families of **hyperonic DD2-based equations of state**, with automated batch calculations and Python analysis of neutron-star structure, tidal deformability, and mass-radius curvature.
-
-The analysis is also designed to reproduce and investigate several diagnostics discussed in recent work on identifying hyperonic matter through neutron-star macroscopic observables.
+The repository contains a Fortran TOV + tidal-deformability solver, EoS conversion and validation tools, a reproducibly selected 100-model hyperonic ensemble, crust-to-core construction utilities, batch runners, validation scripts, paper-oriented analysis scripts, and PDF documentation.
 
 ---
 
-## Physics
+## 1. Scientific scope
 
-For a static, spherically symmetric, non-rotating neutron star, the stellar structure is determined by the TOV equations
+For each central energy density, the solver integrates the stellar-structure and tidal-perturbation equations and returns quantities including
 
-```math
-\frac{dm}{dr} = 4\pi r^2 \epsilon
-```
+- gravitational mass `M`,
+- radius `R`,
+- compactness `C=M/R`,
+- quadrupolar Love number `k2`,
+- tidal coupling quantity `kappa2`,
+- dimensionless tidal deformability `Lambda`,
+- rest/baryonic mass and auxiliary quantities.
 
-and
+The current research workflow studies whether stellar observables can reveal strong softening associated with hyperons in neutron-star matter.
 
-```math
-\frac{dP}{dr}
-=
--\frac{(\epsilon+P)(m+4\pi r^3P)}
-{r(r-2m)}.
-```
+The main bulk quantities are
 
-The stellar surface is defined approximately by
+`Mmax`, `R1.4`, `R1.6`, `Lambda1.4`, and `Lambda1.6`.
 
-```math
-P(R) \simeq 0,
-```
+The paper-oriented derivative quantities include the signed mass-radius curvature
 
-with total gravitational mass
+`kappa_R = (d2R/dM2) / [1 + (dR/dM)^2]^(3/2)`
 
-```math
-M = m(R).
-```
+together with `d2lambda/dM2`, `dR/dM` at 1.6 solar masses, and `dLambda/dM` at 1.6 solar masses.
 
-The code simultaneously integrates the tidal perturbation equations required to determine the quadrupolar Love number $k_2$.
+Reference paper:
 
-The dimensionless tidal deformability is
+> A. Bauswein et al., *Stellar properties indicating the presence of hyperons in neutron stars*, Phys. Rev. Research **8**, 013253 (2026), DOI: 10.1103/ygtr-ktqk.
 
-```math
-\Lambda
-=
-\frac{2}{3}k_2 C^{-5},
-```
-
-where the compactness is
-
-```math
-C = \frac{GM}{Rc^2}.
-```
-
-The geometric tidal deformability used in part of the analysis is
-
-```math
-\lambda = \Lambda M^5.
-```
+The current 100-EoS hyperonic ensemble is an additional dataset on which this methodology is being applied; it is **not** the exact EoS sample used by Bauswein et al.
 
 ---
 
-## Repository structure
+## 2. Repository structure
 
 ```text
 tov-tidal-deformability/
-│
 ├── README.md
 ├── infile
 │
 ├── src/
 │   └── logtov_seq_geom_tidal.f90
 │
+├── scripts/
+│   ├── Tidal_control.sh
+│   ├── run_all_eos.sh
+│   ├── convert_compose_1d.py
+│   ├── extract_100_hyperonic.py
+│   ├── build_complete_hyperonic_eos.py
+│   ├── validate_complete_tables.py
+│   ├── validate_id130.py
+│   └── run_hyperonic_100.sh
+│
 ├── analysis/
 │   ├── analyse_single_eos.py
 │   ├── analyse_multiple_eos.py
-│   └── analyse_paper_comparison.py
-│
-├── scripts/
-│   ├── Tidal_control.sh
-│   └── run_all_eos.sh
+│   ├── analyse_paper_comparison.py
+│   └── audit_hyperonic_runs.py
 │
 ├── eos/
 │   ├── lists/
-│   └── EoS_dd2_npY_T0_beta_eq_eta_D-eta_V-Mg/
+│   ├── EoS_dd2_npY_T0_beta_eq_eta_D-eta_V-Mg/
+│   ├── compose/
+│   ├── crust/
+│   │   └── GPPVA_TW/
+│   └── hyperonic_dataset/
+│       └── hyperonic_100/
+│           ├── core_tables/
+│           ├── complete_tables/
+│           ├── manifest.csv
+│           ├── selected_ids.txt
+│           └── crust_matching_diagnostics.csv
+│
+├── results/
+│   └── hyperonic_100/
 │
 ├── docs/
 │   └── instructions.txt
 │
-└── results/
-    ├── tov/
-    └── paper_comparison/
+└── documentations/
+    └── PDF documentation files
 ```
+
+`documentations/` contains the human-readable PDF documentation for the project. New users should read those files alongside this README.
 
 ---
 
-## Equations of state
+## 3. Requirements
 
-The current calculations use cold, beta-equilibrated hyperonic EoSs with filenames of the form
+### Fortran
 
-```text
-EoS_dd2_npY_T0_beta_eq_01_05_Mg_800.dat
-```
-
-The `npY` label denotes neutron-proton-hyperon matter.
-
-In the current plotting and analysis convention, a filename such as
-
-```text
-01_05_Mg_800
-```
-
-is displayed as
-
-```math
-\eta_D = 0.1,
-```
-
-```math
-\eta_V = 0.5,
-```
-
-and
-
-```math
-M_g = 800.
-```
-
-Different combinations of these parameters generate different hyperonic EoSs.
-
----
-
-## Input format
-
-The Fortran code reads its configuration from `infile`.
-
-Example:
-
-```text
-1.e14 0.3e14 100
-eos/EoS_dd2_npY_T0_beta_eq_eta_D-eta_V-Mg/EoS_dd2_npY_T0_beta_eq_01_05_Mg_800.dat
-```
-
-The first line specifies:
-
-```text
-initial central energy density
-central-density step
-number of stellar models
-```
-
-The second line specifies the path to the EoS table.
-
-For higher-resolution derivative and curvature calculations, a finer sequence can be used, for example
-
-```text
-1.e14 0.05e14 350
-```
-
----
-
-## Compilation
-
-The Fortran code can be compiled using `gfortran`:
+A working GNU Fortran compiler is required.
 
 ```bash
-gfortran -o logtov_seq_geom_tidal.out \
-src/logtov_seq_geom_tidal.f90 \
--fno-automatic
+gfortran --version
 ```
 
----
+### Python
 
-## Running a single EoS
+Python 3 is used for conversion, validation, batch preparation, and analysis.
 
-After editing `infile`, run
+Main packages:
+
+```text
+numpy
+pandas
+matplotlib
+scienceplots
+```
+
+Quick check:
 
 ```bash
-./logtov_seq_geom_tidal.out
+python3 -c "import numpy, pandas, matplotlib; print('Python dependencies OK')"
 ```
 
-The main output file is
-
-```text
-logtov_seq_geom_tidal.dat
-```
-
-A typical output contains quantities including:
-
-- central energy density,
-- radius,
-- gravitational mass,
-- baryonic/rest mass,
-- compactness,
-- central pressure,
-- Love number $k_2$,
-- tidal deformability $\Lambda$,
-- tidal perturbation quantities.
-
-In the current source, the radius written to column 2 is already in km.
-
----
-
-## Batch EoS calculations
-
-Multiple EoSs can be run automatically using
-
-```bash
-./scripts/run_all_eos.sh
-```
-
-The script reads the EoS filenames from a list and automatically:
-
-1. rewrites `infile`,
-2. runs the Fortran solver,
-3. saves the output under a unique EoS-specific filename,
-4. repeats the calculation for the next EoS.
-
-Results are stored in
-
-```text
-results/tov/
-```
-
-for example
-
-```text
-results/tov/EoS_dd2_npY_T0_beta_eq_01_05_Mg_800_TOV.dat
-```
-
----
-
-## Python analysis
-
-### Single-EoS analysis
-
-Single-EoS outputs can be analysed to obtain quantities such as
-
-```math
-M_{\max},
-```
-
-```math
-R_{1.4},
-```
-
-and
-
-```math
-\Lambda_{1.4}.
-```
-
-For a standard one-family TOV sequence, the stable branch is taken up to the maximum of
-
-```math
-M(\rho_c).
-```
-
----
-
-### Multi-EoS analysis
-
-The multi-EoS analysis automatically compares all calculated sequences and extracts quantities such as
-
-```math
-M_{\max},
-```
-
-```math
-R_{1.4},
-\qquad
-R_{1.6},
-\qquad
-R_{1.8},
-```
-
-and
-
-```math
-\Lambda_{1.4},
-\qquad
-\Lambda_{1.6},
-\qquad
-\Lambda_{1.8}.
-```
-
-It also produces combined mass-radius and tidal-deformability plots.
-
----
-
-## Paper-oriented analysis
-
-The script
-
-```text
-analysis/analyse_paper_comparison.py
-```
-
-implements additional diagnostics motivated by studies of hyperonic signatures in neutron-star observables.
-
-The main quantities include the signed curvature of the mass-radius relation
-
-```math
-\kappa_R
-=
-\frac{d^2R/dM^2}
-{\left[1+\left(dR/dM\right)^2\right]^{3/2}},
-```
-
-the geometric tidal deformability
-
-```math
-\lambda = \Lambda M^5,
-```
-
-and derivatives such as
-
-```math
-\frac{dR}{dM},
-```
-
-```math
-\frac{d\Lambda}{dM},
-```
-
-and
-
-```math
-\frac{d^2\lambda}{dM^2}.
-```
-
-The analysis generates plots including
-
-```text
-01_mass_radius_all.pdf
-02_Lambda_vs_mass_all.pdf
-03_lambda_vs_mass_all.pdf
-04_kappa_R_vs_mass.pdf
-05_kappa_ref_vs_R_ref.pdf
-06_d2lambda_dM2_vs_mass.pdf
-07_d2lambda_ref_vs_lambda_ref.pdf
-08_dR_dM_ref_vs_Mmax.pdf
-09_dLambda_dM_ref_vs_Mmax.pdf
-```
-
-as well as a summary CSV containing the derived stellar quantities.
-
----
-
-## Current qualitative results
-
-For the currently analysed hyperonic EoS family, many models share nearly identical intermediate-density neutron-star structure while differing more strongly close to their maximum masses.
-
-Typical values for the well-behaved sequences are approximately
-
-```math
-R_{1.6} \simeq 13.15\ {\rm km},
-```
-
-```math
-\Lambda_{1.6} \simeq 299,
-```
-
-with maximum masses around
-
-```math
-M_{\max} \sim 2.0 - 2.1\,M_\odot
-```
-
-for several parameter combinations.
-
-The calculated mass-radius curvature also becomes significantly negative in the high-mass regime, with some models reaching approximately
-
-```math
-\kappa_R \lesssim -2.5.
-```
-
-This behaviour is of particular interest when comparing hyperonic and nucleonic neutron-star models.
-
-These values are preliminary and should be interpreted together with numerical-resolution and stability checks.
-
----
-
-## Numerical considerations
-
-First and especially second derivatives are significantly more sensitive to numerical resolution than the basic mass-radius relation.
-
-Quantities such as
-
-```math
-\frac{d^2R}{dM^2}
-```
-
-and
-
-```math
-\frac{d^2\lambda}{dM^2}
-```
-
-can become noisy if:
-
-- the central-density grid is too coarse,
-- neighbouring stellar models have nearly identical masses,
-- the EoS contains sharp features,
-- the maximum mass is not reached within the chosen density range.
-
-For this reason, coarse runs are useful for initial exploration, while finer central-density sampling should be used for final curvature and derivative analysis.
-
-The analysis scripts also flag EoSs for which the maximum mass occurs at the edge of the calculated sequence.
-
----
-
-## Stable branch
-
-For ordinary one-family TOV sequences, configurations are treated as stable up to the maximum-mass point, where approximately
-
-```math
-\frac{dM}{d\rho_c} = 0.
-```
-
-The normal stable branch satisfies approximately
-
-```math
-\frac{dM}{d\rho_c} > 0.
-```
-
-Beyond the maximum-mass turning point,
-
-```math
-\frac{dM}{d\rho_c} < 0,
-```
-
-and the configurations are generally associated with radial instability.
-
-More complicated third-family or twin-star sequences require a dedicated stability analysis.
-
----
-
-## Tidal deformability
-
-The dimensionless tidal deformability depends strongly on compactness:
-
-```math
-\Lambda
-=
-\frac{2}{3}k_2
-\left(
-\frac{Rc^2}{GM}
-\right)^5.
-```
-
-This means that relatively small differences in radius can produce much larger differences in $\Lambda$.
-
-In general,
-
-```math
-M \uparrow
-\quad\Rightarrow\quad
-C \uparrow
-\quad\Rightarrow\quad
-\Lambda \downarrow.
-```
-
-This makes tidal deformability a particularly sensitive probe of the underlying EoS.
-
----
-
-## Mass-radius curvature
-
-The signed curvature
-
-```math
-\kappa_R
-=
-\frac{d^2R/dM^2}
-{\left[1+\left(dR/dM\right)^2\right]^{3/2}}
-```
-
-provides a way to quantify changes in the shape of the mass-radius relation.
-
-Rather than describing a curve only qualitatively as "bending", $\kappa_R$ allows that behaviour to be measured directly.
-
-Strong changes in curvature can be associated with rapid changes in the stiffness or composition of the underlying EoS, although numerical convergence checks are required before interpreting such features physically.
-
----
-
-## Plotting
-
-The analysis scripts use `SciencePlots` for publication-style figures.
-
-Install it with
+For the paper-comparison plotting script:
 
 ```bash
 python3 -m pip install SciencePlots
 ```
 
-The plotting scripts use
-
-```python
-plt.style.use(["science", "no-latex", "grid"])
-```
-
-so a local LaTeX installation is not required.
-
 ---
 
-## Python requirements
+## 4. EoS input format
 
-The main Python dependencies are:
-
-- `numpy`
-- `matplotlib`
-- `SciencePlots`
-
-Install them using
-
-```bash
-python3 -m pip install numpy matplotlib SciencePlots
-```
-
----
-
-## Analysis workflow
-
-A typical workflow is:
+The Fortran solver expects a four-column text table:
 
 ```text
-Select EoS
-   ↓
-Edit or generate infile
-   ↓
-Run TOV + tidal solver
-   ↓
-Save EoS-specific output
-   ↓
-Repeat for all EoSs
-   ↓
-Run multi-EoS Python analysis
-   ↓
-Extract Mmax, radii and tidal quantities
-   ↓
-Calculate derivatives and curvature
-   ↓
-Compare EoS families
+epsilon    P    nB    muB
 ```
 
-For batch calculations:
+with units
+
+```text
+epsilon : MeV fm^-3
+P       : MeV fm^-3
+nB      : fm^-3
+muB     : MeV
+```
+
+A header line is required because the current Fortran reader discards the first line before reading numerical data.
+
+Example:
+
+```text
+# epsilon[MeV/fm^3] P[MeV/fm^3] nB[fm^-3] muB[MeV]
+3.7897871000000000e+01  1.5324300000000000e-01  4.0000000000000000e-02  9.5127970100000000e+02
+...
+```
+
+The current interpolation routines operate in logarithmic space. The optimised EoS search also assumes monotonic tables, so newly generated EoSs should be validated before use.
+
+---
+
+## 5. The `infile`
+
+The solver reads run parameters from `infile` in the repository root.
+
+Format:
+
+```text
+<initial central energy density> <central-density step> <number of models>
+<path to EoS table>
+```
+
+Example:
+
+```text
+1.e14 0.05e14 400
+eos/hyperonic_dataset/hyperonic_100/complete_tables/hyperon_EOS_001_ID_00130_complete.dat
+```
+
+Each stellar model corresponds to one central density in the generated sequence.
+
+---
+
+## 6. Compiling the solver
+
+Recommended production build:
 
 ```bash
-./scripts/run_all_eos.sh
+gfortran -O1   -fno-automatic   -o logtov_seq_geom_tidal.out   src/logtov_seq_geom_tidal.f90
 ```
 
-followed by
+`-O1` was retained after regression testing. Higher compiler optimisation levels were not adopted for production because benchmark tests changed a tidal output quantity at roughly the percent level.
+
+The executable is machine dependent and should normally not be committed.
+
+---
+
+## 7. Running one EoS
+
+After preparing `infile`:
 
 ```bash
-python3 analysis/analyse_paper_comparison.py
+./logtov_seq_geom_tidal.out
+```
+
+or
+
+```bash
+/usr/bin/time -p ./logtov_seq_geom_tidal.out
+```
+
+The main output is
+
+```text
+logtov_seq_geom_tidal.dat
+```
+
+This file is overwritten by the next solver run, so save it first.
+
+Example:
+
+```bash
+mkdir -p results/test
+
+cp logtov_seq_geom_tidal.dat   results/test/example_TOV.dat
+```
+
+### Main output columns
+
+| Column | Quantity |
+|---|---|
+| 1 | central total energy density in solver units |
+| 2 | radius |
+| 3 | gravitational mass in solar masses |
+| 4 | rest/baryonic mass |
+| 7 | compactness |
+| 8 | central rest-mass density |
+| 9 | central pressure |
+| 10 | Love number `k2` |
+| 11 | tidal coupling quantity `kappa2` |
+| 12 | dimensionless tidal deformability `Lambda` |
+| 13+ | tidal/auxiliary quantities |
+
+**Important:** in the current source, output column 2 is already written in kilometres. Do not multiply it by 1.476 again.
+
+Low-mass tidal values can become numerically unreliable and should not automatically be interpreted as physical results.
+
+---
+
+## 8. Solver optimisation
+
+The production solver has been accelerated without changing the physical equations, RK4 scheme, radial integration step, or logarithmic EoS interpolation rule.
+
+Accepted changes include
+
+- restricting searches to the actually loaded EoS range;
+- replacing repeated linear EoS searches with binary searches;
+- caching repeated `epsilon(P)` evaluations inside RHS routines;
+- removing unnecessary diagnostic I/O from production runs;
+- caching exact repeated pressure requests.
+
+A representative 20-model benchmark decreased from approximately `11.46 s` to `1.63 s`, corresponding to roughly a `7x` speed-up.
+
+See [`documentations/`](documentations/) for the full optimisation record.
+
+---
+
+## 9. Hyperonic 100-EoS dataset
+
+The project includes a reproducibly selected set of 100 cold hyperonic EoSs from the larger zero-temperature hyperonic ensemble used in the current study.
+
+Selection script:
+
+```text
+scripts/extract_100_hyperonic.py
+```
+
+Fixed NumPy seed:
+
+```text
+20260930
+```
+
+The selected source IDs are stored in
+
+```text
+eos/hyperonic_dataset/hyperonic_100/selected_ids.txt
+```
+
+and per-model information in
+
+```text
+eos/hyperonic_dataset/hyperonic_100/manifest.csv
+```
+
+### Core tables
+
+The selected source EoSs begin at
+
+`nB = 0.04 fm^-3`.
+
+Therefore the files in
+
+```text
+eos/hyperonic_dataset/hyperonic_100/core_tables/
+```
+
+are **core-only** tables and should not be used directly as complete neutron-star EoSs.
+
+---
+
+## 10. Building complete crust-to-core EoSs
+
+Use
+
+```text
+scripts/build_complete_hyperonic_eos.py
+```
+
+The current low-density prescription is
+
+```text
+BPS outer crust
+        ↓
+inner-crust polytropic bridge
+        ↓
+hyperonic core
+```
+
+with
+
+`P(epsilon) = a1 + a2 * epsilon^(4/3)`.
+
+The outer-crust endpoint is taken near
+
+`nB = 1e-4 fm^-3`
+
+and the hyperonic core begins at
+
+`nB = 0.04 fm^-3`.
+
+The matching coefficients are determined separately for each hyperonic core so that pressure is continuous at both endpoints.
+
+The BPS outer-crust segment used by the current workflow is obtained from the CompOSE GPPVA(TW) crust table and converted into the solver format.
+
+Build the 100 complete EoSs with
+
+```bash
+python3 scripts/build_complete_hyperonic_eos.py
+```
+
+Output:
+
+```text
+eos/hyperonic_dataset/hyperonic_100/complete_tables/
+```
+
+Then validate:
+
+```bash
+python3 scripts/validate_complete_tables.py
+```
+
+Expected result:
+
+```text
+Number of complete tables: 100
+Bad tables: 0
 ```
 
 ---
 
-## Main observables
+## 11. Validation against reference M-R sequences
 
-The primary quantities used when comparing EoSs are
+Representative models were compared against the supplied zero-temperature mass-radius reference sequences before launching the full 100-EoS calculation.
 
-```math
-M_{\max},
+| EoS ID | Reference Mmax | Local Mmax | R1.4 difference | M-R radius RMS |
+|---:|---:|---:|---:|---:|
+| 130 | 2.03494 | 2.02890 | -0.170 km | 0.172 km |
+| 230 | 2.03359 | 2.02758 | -0.157 km | 0.161 km |
+| 15732 | 2.21160 | 2.20510 | -0.189 km | 0.185 km |
+
+For these tests, maximum masses agree at about the 0.3% level. The local radii are systematically slightly smaller than the supplied reference sequences, by approximately 0.15-0.19 km in the tested cases.
+
+Dedicated ID 130 validation:
+
+```bash
+python3 scripts/validate_id130.py
 ```
 
-```math
-R_{1.4},
-\qquad
-R_{1.6},
+These comparisons validate the present workflow for the coarse population study while documenting residual sensitivity to the low-density/crust treatment.
+
+---
+
+## 12. Running the 100-EoS batch
+
+Make the batch runner executable:
+
+```bash
+chmod +x scripts/run_hyperonic_100.sh
 ```
 
-and
+Run:
 
-```math
-\Lambda_{1.4},
-\qquad
-\Lambda_{1.6}.
+```bash
+./scripts/run_hyperonic_100.sh
 ```
 
-Higher-order diagnostics include
+On macOS:
 
-```math
-\kappa_R(M),
+```bash
+caffeinate -i ./scripts/run_hyperonic_100.sh
 ```
 
-```math
-\frac{dR}{dM},
+The first pass uses
+
+```text
+1.e14 0.05e14 400
 ```
 
-```math
-\frac{d\Lambda}{dM},
+and automatically extends a model to 600 configurations if the maximum-mass turning point is not adequately resolved.
+
+Outputs:
+
+```text
+results/hyperonic_100/coarse/
 ```
 
-and
+Logs:
 
-```math
-\frac{d^2\lambda}{dM^2}.
+```text
+results/hyperonic_100/logs/
+```
+
+Status:
+
+```text
+results/hyperonic_100/batch_status.csv
+```
+
+The batch runner is designed to skip already completed EoSs with resolved maxima when restarted.
+
+---
+
+## 13. Auditing the batch
+
+After the coarse batch finishes:
+
+```bash
+python3 analysis/audit_hyperonic_runs.py
+```
+
+This generates
+
+```text
+results/hyperonic_100/coarse_summary.csv
+```
+
+with quantities including
+
+- `Mmax`,
+- `R(Mmax)`,
+- `R1.4`,
+- `R1.6`,
+- `Lambda1.4`,
+- `Lambda1.6`,
+- whether the maximum-mass turning point is resolved.
+
+---
+
+## 14. Paper-oriented analysis
+
+Main script:
+
+```text
+analysis/analyse_paper_comparison.py
+```
+
+It can generate
+
+- combined M-R curves;
+- `Lambda(M)`;
+- dimensional/geometric `lambda(M)`;
+- signed curvature `kappa_R(M)`;
+- `kappa_R` at a reference mass;
+- `d2lambda/dM2`;
+- `dR/dM` at a reference mass;
+- `dLambda/dM` at a reference mass;
+- CSV summaries and warning files.
+
+The script uses centred second-order finite differences for nonuniform mass spacing.
+
+### Resolution warning
+
+The coarse 400/600-model sequences are suitable for population-level quantities such as `Mmax`, radii and reference-mass `Lambda`, but should **not automatically be treated as converged for second derivatives**.
+
+Publication-quality derivative work should use
+
+1. a finer central-density grid;
+2. resolution/convergence tests;
+3. careful treatment of the region near `Mmax`.
+
+A purely nucleonic control ensemble is also required for a direct hyperonic-vs-nucleonic reproduction of the Bauswein comparison.
+
+---
+
+## 15. Numerical caveats
+
+### Monotonicity
+
+The optimised binary-search interpolation assumes monotonic EoS arrays. Validate new tables before running the solver.
+
+### Header handling
+
+The Fortran reader discards the first line of each EoS file. Solver-ready tables should contain a header.
+
+### Radial step
+
+The current source uses
+
+```fortran
+h = 10.*1e-5/1.746
+```
+
+Changing it affects runtime and numerical accuracy. Do not alter it for precision work without a convergence test.
+
+### Compiler optimisation
+
+The production workflow uses `-O1`. Do not switch to `-O2`, `-O3`, or aggressive floating-point options without repeating the tidal regression tests.
+
+### Radius convention
+
+For the current source, output column 2 is already in kilometres.
+
+### Derivative observables
+
+Second derivatives are much more sensitive to sequence resolution than `M`, `R`, or `Lambda`. Always test convergence before interpreting curvature or `d2lambda/dM2`.
+
+### Output overwriting
+
+`logtov_seq_geom_tidal.dat` is replaced on every run. Save each result before running another EoS.
+
+---
+
+## 16. Documentation
+
+Detailed project documentation is stored in
+
+[`documentations/`](documentations/)
+
+and covers topics such as
+
+- TOV/tidal solver architecture;
+- variable definitions and input/output conventions;
+- EoS interpolation and units;
+- RK4 integration and tidal perturbations;
+- solver optimisation and benchmarking;
+- hyperonic neutron-star physics and analysis methodology;
+- numerical caveats and suggested future improvements.
+
+The original solver instructions are retained under
+
+```text
+docs/
+```
+
+for provenance.
+
+---
+
+## 17. Recommended workflow for a new user
+
+```text
+1. Read README.md and documentations/
+2. Check Python and gfortran
+3. Compile the solver with -O1 -fno-automatic
+4. Inspect and validate the EoS table
+5. Prepare infile
+6. Run one EoS
+7. Save the output
+8. Check M-R behaviour and Mmax resolution
+9. Only then run multi-EoS calculations
+10. Audit the population results
+11. Use fine grids + convergence tests for derivative observables
+```
+
+For the current hyperonic workflow:
+
+```text
+core tables
+    ↓
+build complete crust+core tables
+    ↓
+validate all tables
+    ↓
+validate representative EoSs against reference M-R curves
+    ↓
+run the 100-EoS coarse batch
+    ↓
+audit Mmax, R and Lambda
+    ↓
+perform fine-resolution derivative runs
+    ↓
+Bauswein-style curvature/tidal analysis
 ```
 
 ---
 
-## Current project goals
+## 18. Reproducibility
 
-Current work includes:
+The project deliberately separates
 
-- systematic scans of hyperonic EoS parameters,
-- automated multi-EoS TOV calculations,
-- higher-resolution stellar sequences,
-- mass-radius curvature analysis,
-- tidal-deformability derivative analysis,
-- identification of numerically unstable or unresolved sequences,
-- comparison with published hyperonic neutron-star diagnostics,
-- future comparison with corresponding purely nucleonic control EoSs.
+- source code,
+- small reproducible EoS subsets and metadata,
+- generated outputs,
+- large external source datasets.
 
----
+Large external archives and generated batch outputs should generally not be committed directly to Git. The scripts, selected source IDs, manifests, and construction procedure are intended to make the working dataset reproducible.
 
-## Reference comparison
+When adding a new EoS family, document
 
-The current paper-oriented analysis is motivated by recent work investigating whether macroscopic neutron-star observables may provide signatures of hyperonic degrees of freedom.
-
-Particular attention is given to:
-
-- the curvature of the mass-radius relation,
-- derivatives of tidal deformability,
-- correlations between fixed-mass observables and maximum mass.
-
-The present calculations focus on hyperonic EoSs. A full hyperonic-versus-nucleonic comparison will require corresponding purely nucleonic control models analysed with the same numerical pipeline.
-
----
-
-## Status
-
-This repository is under active development.
-
-The current results should be considered preliminary until convergence tests with finer central-density sampling have been completed, particularly for derivative-based observables.
+- source and reference;
+- physical composition;
+- units and column definitions;
+- crust treatment;
+- preprocessing;
+- monotonicity checks;
+- central-density sampling;
+- compiler and solver settings.

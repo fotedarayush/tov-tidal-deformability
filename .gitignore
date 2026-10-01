@@ -42,3 +42,31 @@ eos/hyperonic_dataset/*.zip
 
 # Native subset generated from source dataset
 eos/hyperonic_dataset/hyperonic_100/selected_100_native.csv.gz
+
+# ------------------------------------------------------------
+# Generated binaries and temporary solver output
+# ------------------------------------------------------------
+logtov_seq_geom_tidal.out
+logtov_seq_geom_tidal.dat
+
+# macOS
+.DS_Store
+
+# ------------------------------------------------------------
+# Large external source datasets
+# ------------------------------------------------------------
+eos/hyperonic_dataset/*.csv.gz
+eos/hyperonic_dataset/*.zip
+
+# Native subset generated from the source dataset
+eos/hyperonic_dataset/hyperonic_100/selected_100_native.csv.gz
+
+# Downloaded external archives
+eos/crust/**/eos.zip
+
+# ------------------------------------------------------------
+# Generated batch output
+# ------------------------------------------------------------
+results/hyperonic_100/logs/
+results/hyperonic_100/coarse/
+results/hyperonic_100/batch_console.log

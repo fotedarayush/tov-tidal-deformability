@@ -81,8 +81,11 @@ EOF
         rc=$?
         echo "solver exit code: $rc"
         echo "end: $(date)"
-        exit $rc
     } > "$logfile" 2>&1
+
+    if [ "$rc" -ne 0 ]; then
+        return "$rc"
+    fi
 
     if [ ! -s logtov_seq_geom_tidal.dat ]; then
         return 1
